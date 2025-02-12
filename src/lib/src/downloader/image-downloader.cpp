@@ -205,7 +205,7 @@ void ImageDownloader::loadedSave(Image::LoadTagsResult result)
 		}
 	}
 
-	// Directly use the image path as temporary file  if possible
+	// Directly use the image path as a temporary file if possible
 	if (m_temporaryPath.isEmpty()) {
 		m_temporaryPath = m_paths.first() + ".tmp";
 	}
@@ -255,6 +255,31 @@ void ImageDownloader::loadedSave(Image::LoadTagsResult result)
 		}
 	}
 
+	// --- Save image tags in a .txt file ---
+	for (const QString &path : qAsConst(m_paths)) {
+		// Remove image extension and replace with .txt
+		QString tagFilePath = path.left(path.lastIndexOf(".")) + ".txt";
+
+		std::ofstream tagFile(tagFilePath.toStdString());
+		if (tagFile.is_open()) {
+			// Convert tags to a single comma-separated string
+			QStringList tagList;
+			for (const Tag &tag : m_image->tags()) {
+				tagList.append(tag.text());
+			}
+			QString tagString = tagList.join(", ");  // Join with ", "
+
+			// Write to file
+			tagFile << tagString.toStdString();
+			tagFile.close();
+
+			log(QStringLiteral("Saved tags to: `%1`").arg(tagFilePath), Logger::Info);
+		} else {
+			log(QStringLiteral("Failed to write tags to: `%1`").arg(tagFilePath), Logger::Warning);
+		}
+	}
+	// --------------------------------------
+
 	m_url = m_image->url(m_size);
 
 	if (m_url.isEmpty()) {
@@ -266,6 +291,7 @@ void ImageDownloader::loadedSave(Image::LoadTagsResult result)
 	log(QStringLiteral("Loading and saving image from `%1` in `%2`").arg(m_url.toString(), m_paths.first()));
 	loadImage();
 }
+
 
 void ImageDownloader::loadImage(bool rateLimit)
 {
